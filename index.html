@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6b4226">
+<meta name="description" content="Check Raws - Rekap otomatis dari bahan LPP, Display, Storage, Master Stock dan PLU">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<title>☕ Check Raws PWA</title>
+<style>
+:root{--brown:#6b4226;--brown2:#4a2c17;--cream:#f4e7d5;--bg:#faf3e9;--line:#e0c9a8;--text:#3b2417;--muted:#8a7261;--green:#3f7d43;--red:#c1502e;--accent:#c98a3d}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,var(--brown2),var(--brown));color:#fff;padding:16px 22px;position:sticky;top:0;z-index:5;box-shadow:0 2px 10px #0003;display:flex;align-items:center;gap:14px}
+header img.mascot{width:52px;height:52px;object-fit:contain;border-radius:50%;background:var(--cream);box-shadow:0 2px 6px #0003;flex-shrink:0}
+header h1{margin:0;font-size:21px;letter-spacing:.3px}header p{margin:4px 0 0;font-size:12px;opacity:.92}
+main{max-width:1500px;margin:auto;padding:18px}
+.card{background:#fffdf9;border:1px solid var(--line);border-radius:16px;box-shadow:0 4px 18px #6b422615;padding:16px;margin-bottom:16px}
+.upload{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.file-input-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.upload-btn{display:inline-flex;align-items:center;gap:8px;background:var(--cream);color:var(--brown2);border:2px dashed var(--accent);border-radius:20px;padding:9px 18px;font-weight:700;cursor:pointer;transition:background .12s,transform .12s}
+.upload-btn:hover{background:#ecd9bb;transform:translateY(-1px)}
+button{border:0;border-radius:20px;padding:10px 18px;font-weight:700;cursor:pointer;background:var(--brown);color:#fff;transition:transform .12s,background .12s}
+button:hover:not(:disabled){background:var(--brown2);transform:translateY(-1px)}
+button.secondary{background:var(--cream);color:var(--brown2)}button.secondary:hover:not(:disabled){background:#ecd9bb}button:disabled{opacity:.45;cursor:not-allowed}
+#status{font-size:12px;color:var(--muted);margin-top:9px;white-space:pre-line}
+.filelist{font-size:12px;color:#5c4432;margin-top:8px}
+.tabs{display:flex;gap:7px;margin-bottom:10px}.tab{background:var(--cream);color:var(--brown2);border-radius:20px}.tab.active{background:var(--brown);color:white}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px}.section-title h2{font-size:15px;margin:0;color:var(--brown2)}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:11px;background:#fff;white-space:nowrap}
+th,td{border:1px solid var(--line);padding:5px 7px}
+th{background:var(--cream);color:var(--brown2);text-align:center;font-weight:700;position:sticky;top:0;z-index:2}
+td.num{text-align:right}td.center{text-align:center}
+td.date{text-align:center}
+.empty{text-align:center;color:var(--muted);padding:35px}
+.bad{color:var(--red);font-weight:700}.good{color:var(--green);font-weight:700}
+.hidden{display:none}
+.small{font-size:11px;color:var(--muted)}
+.title-actions{display:flex;align-items:center;gap:10px}
+.btn-small{padding:6px 13px;font-size:11px;border-radius:14px}
+@media(max-width:700px){main{padding:10px}.card{padding:10px}header{padding:12px 14px}header img.mascot{width:42px;height:42px}.upload{display:block}.upload>*{margin-bottom:7px}.btn-row{justify-content:flex-start!important}}
+</style>
+</head>
+<body>
+<header><img class="mascot" src="assets/icon.png" alt="Maskot kopi Check Raws"><div><h1>☕ CHECK RAWS</h1></div></header>
+<main>
+<section class="card">
+  <div class="upload">
+    <input id="files" class="file-input-hidden" type="file" multiple accept=".csv,.xlsx,.xls">
+    <label for="files" class="upload-btn">🫘 Pilih Bahan</label>
+    <div class="btn-row" style="display:flex;gap:10px;margin-left:auto">
+      <button id="processBtn">☕ Proses Rekap</button>
+      <button id="resetBtn" class="secondary">🧹 Reset</button>
+    </div>
+  </div>
+  <div id="status">Pilih bahan yang tepat untuk menghasilkan cita rasa yang PAS</div>
+  <div id="filelist" class="filelist"></div>
+</section>
+
+<section class="card">
+  <div class="tabs">
+    <button class="tab active" data-tab="summary">Tabel 1 — Rekap</button>
+    <button class="tab" data-tab="detail">Tabel 2 — Detail</button>
+  </div>
+  <div id="summary" class="panel">
+    <div class="section-title"><h2>REKAP ITEM</h2><div class="title-actions"><span id="summaryCount" class="small"></span><button id="exportSummaryBtn" class="secondary btn-small">🧾 Export ke Excel</button></div></div>
+    <div class="table-wrap"><table id="summaryTable"></table></div>
+  </div>
+  <div id="detail" class="panel hidden">
+    <div class="section-title"><h2>DETAIL DISPLAY / STORAGE / PUT PICK</h2><div class="title-actions"><span id="detailCount" class="small"></span><button id="exportDetailBtn" class="secondary btn-small">🧾 Export ke Excel</button></div></div>
+    <div class="table-wrap"><table id="detailTable"></table></div>
+  </div>
+</section>
+</main>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let selectedFiles=[];
+
+$("files").addEventListener("change",e=>{
+  selectedFiles=[...e.target.files];
+  $("filelist").textContent=selectedFiles.length
+    ? selectedFiles.map(f=>f.name).join("  •  ")
+    : "";
+});
+$("resetBtn").onclick=()=>{selectedFiles=[];$("files").value="";$("filelist").textContent="";$("status").textContent="Siap menerima bahan.";clearTables()};
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x=>x.classList.add("hidden"));
+  b.classList.add("active");$(b.dataset.tab).classList.remove("hidden");
+});
+
+function clearTables(){$("summaryTable").innerHTML="";$("detailTable").innerHTML="";$("summaryCount").textContent="";$("detailCount").textContent="";lastSummaryAOA=null;lastDetailAOA=null;lastDetailMerges=null}
+function cleanKey(v){return String(v??"").replace(/^\uFEFF/,"").trim().toUpperCase()}
+function num(v){if(v===null||v===undefined||v==="")return 0; if(typeof v==="number")return v; let s=String(v).trim().replace(/,/g,""); let n=Number(s); return Number.isFinite(n)?n:0}
+function plu(v){if(v===null||v===undefined||v==="")return ""; if(typeof v==="number")return String(Math.trunc(v)); let s=String(v).trim(); if(/^\d+\.0+$/.test(s))s=s.split(".")[0]; return s.replace(/\D/g,"")||s}
+function excelDate(v){
+  if(v instanceof Date) return isNaN(v)?null:v;
+  if(typeof v==="number"){
+    if(v>20000 && v<80000) return new Date(Date.UTC(1899,11,30)+v*86400000);
+    return null;
+  }
+  if(typeof v!=="string") return null;
+  let s=v.trim();
+  if(!s) return null;
+  // Some exports append a time component, e.g. "9/22/2026 00:00:00" or "2026-09-22T00:00:00".
+  s=s.replace(/[T ]\d{1,2}:\d{2}(:\d{2})?(\s*[AaPp][Mm])?$/,"").trim();
+  // A date stored as plain text digits, e.g. an Excel serial saved as a text cell.
+  if(/^\d+(\.\d+)?$/.test(s)){
+    const n=Number(s);
+    return (n>20000 && n<80000) ? new Date(Date.UTC(1899,11,30)+n*86400000) : null;
+  }
+  // ISO-style: yyyy-mm-dd, yyyy/mm/dd, yyyy.mm.dd
+  let m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if(m){
+    const yy=+m[1], mm=+m[2], dd=+m[3];
+    if(mm>=1&&mm<=12&&dd>=1&&dd<=31) return new Date(Date.UTC(yy,mm-1,dd));
+  }
+  // US-style: mm/dd/yy, mm-dd-yyyy, mm.dd.yy — the raw format used by the source files.
+  m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if(m){
+    let mm=+m[1], dd=+m[2], yy=+m[3];
+    if(yy<100) yy+=(yy<70?2000:1900);
+    if(mm>12 && dd<=12){ const t=mm; mm=dd; dd=t; } // e.g. "22-09-2026" is dd-mm-yyyy, not mm-dd-yyyy
+    if(mm>=1&&mm<=12&&dd>=1&&dd<=31) return new Date(Date.UTC(yy,mm-1,dd));
+  }
+  return null;
+}
+const MONTHS_ID=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+function dateText(v){
+  const d=excelDate(v); if(!d||isNaN(d)) return "";
+  const dd=String(d.getUTCDate()).padStart(2,"0");
+  const mmm=MONTHS_ID[d.getUTCMonth()];
+  const yy=String(d.getUTCFullYear()).slice(-2);
+  return dd+" "+mmm+" "+yy;
+}
+function minDate(arr){let ds=arr.map(excelDate).filter(d=>d&&!isNaN(d)); return ds.length?new Date(Math.min(...ds.map(d=>d.getTime()))):null}
+function maxNum(arr){let a=arr.map(num);return a.length?Math.max(...a):0}
+function sum(arr){return arr.reduce((a,b)=>a+num(b),0)}
+// Recognized column names used both to classify a file and to locate its
+// real header row, since some sources (e.g. Master Stock) have a title row
+// and a merged sub-header row above the actual column headers.
+const HEADER_VOCAB=new Set(["DIVISI","QTY_LPP","PUTPICK","QTY_IN_STORAGE","TGL_EXP","QTY","RAK","SHELF","PRDCD","DESC","DESC2","ALAMAT","FRAC","PLU"]);
+function toAOA(ws){return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""})}
+function findHeaderRow(aoa){
+  let best=0,bestScore=0;
+  const scanRows=Math.min(aoa.length,20);
+  for(let i=0;i<scanRows;i++){
+    const row=aoa[i]||[];
+    const seen=new Set();
+    row.forEach(c=>{const k=cleanKey(c); if(HEADER_VOCAB.has(k)) seen.add(k)});
+    if(seen.size>bestScore){bestScore=seen.size;best=i}
+  }
+  return bestScore>=2?best:0; // fall back to row 1 if nothing recognizable found
+}
+function rowsFromSheet(ws){
+  const aoa=toAOA(ws);
+  const hIdx=findHeaderRow(aoa);
+  const headers=(aoa[hIdx]||[]).map(cleanKey);
+  const rows=[];
+  for(let r=hIdx+1;r<aoa.length;r++){
+    const arr=aoa[r]; if(!arr) continue;
+    const o={};
+    headers.forEach((h,ci)=>{ if(h) o[h]=arr[ci]??"" });
+    rows.push(o);
+  }
+  return rows;
+}
+
+async function readFile(file){
+  const ab=await file.arrayBuffer();
+  if(/\.csv$/i.test(file.name)){
+    let txt=new TextDecoder("utf-8").decode(ab);
+    if(txt.includes("\u0000")) txt=new TextDecoder("windows-1252").decode(ab);
+    // UTF-8 BOM and common Windows CSV are handled here.
+    let wb=XLSX.read(txt,{type:"string",raw:true});
+    return rowsFromSheet(wb.Sheets[wb.SheetNames[0]]);
+  }
+  const wb=XLSX.read(ab,{type:"array",cellDates:false});
+  // Master Stock is the only large xlsx input; use its first sheet.
+  return rowsFromSheet(wb.Sheets[wb.SheetNames[0]]);
+}
+
+function classify(name,rows){
+  const h=new Set(Object.keys(rows[0]||{}));
+  const n=cleanKey(name);
+  if(h.has("DIVISI")&&h.has("QTY_LPP")&&h.has("PUTPICK"))return "lpp";
+  if(h.has("QTY_IN_STORAGE")&&h.has("TGL_EXP"))return "storage";
+  if(h.has("QTY")&&h.has("TGL_EXP")&&h.has("RAK")&&h.has("SHELF"))return "display";
+  if(h.has("PRDCD")&&h.has("DESC") && rows.length<1000)return "plu";
+  if(h.has("PRDCD")&&h.has("DESC2")&&h.has("ALAMAT")&&h.has("FRAC"))return "master";
+  return "";
+}
+
+function indexBy(rows,key){
+  const m=new Map(); rows.forEach(r=>{const k=plu(r[key]); if(k&&!m.has(k))m.set(k,r)}); return m;
+}
+function groupBy(rows,key){
+  const m=new Map(); rows.forEach(r=>{const k=plu(r[key]);if(!k)return;if(!m.has(k))m.set(k,[]);m.get(k).push(r)});return m;
+}
+// Groups storage batches by expiry date, summing qty across different racks
+// that share the same expiry date. Sorted by date ascending (no-date rows last).
+function groupByExpiry(rows,qtyField){
+  const map=new Map(); const order=[];
+  rows.forEach(x=>{
+    const d=excelDate(x.TGL_EXP);
+    const key=d?d.getTime():"__nodate__";
+    if(!map.has(key)){ map.set(key,{TGL_EXP:x.TGL_EXP, qty:0}); order.push(key); }
+    map.get(key).qty+=num(x[qtyField]);
+  });
+  return order.map(k=>map.get(k)).sort((a,b)=>{
+    const da=excelDate(a.TGL_EXP), db=excelDate(b.TGL_EXP);
+    if(!da&&!db) return 0; if(!da) return 1; if(!db) return -1;
+    return da-db;
+  });
+}
+
+function buildResult(src){
+  const master=src.master||[], lpp=src.lpp||[], display=src.display||[], storage=src.storage||[], pluRows=src.plu||[];
+  const mm=indexBy(master,"PRDCD"), lm=groupBy(lpp,"PLU"), dm=groupBy(display,"PLU"), sm=groupBy(storage,"PLU");
+
+  // The spreadsheet's ITEM sheet is a list of raw-material PLUs. PLU.csv is used
+  // as the portable equivalent. If PLU.csv is absent, use LPP items that also exist in master.
+  let items=pluRows.length?pluRows.map(r=>plu(r.PRDCD)).filter(Boolean):[...lm.keys()].filter(k=>mm.has(k));
+  items=[...new Set(items)];
+
+  const summary=[];
+  for(const p of items){
+    const m=mm.get(p)||{};
+    const lr=lm.get(p)||[];
+    const dr=dm.get(p)||[];
+    const sr=sm.get(p)||[];
+    // Rows with no stock (qty <= 0) don't represent a real physical location/expiry,
+    // so they're excluded from totals, min-expiry dates, and rack lookup.
+    const drStock=dr.filter(x=>num(x.QTY)>0);
+    const srStock=sr.filter(x=>num(x.QTY_IN_STORAGE)>0);
+    const frac=num(m.FRAC)||1;
+    const storageQty=sum(srStock.map(x=>num(x.QTY_IN_STORAGE)))*frac;
+    const rakDisplay=maxNum(drStock.map(x=>x.RAK));
+    const rakStorage=maxNum(srStock.map(x=>x.RAK));
+    summary.push({
+      prdcd:p,
+      desc2:m.DESC2 || ((pluRows.find(x=>plu(x.PRDCD)===p)||{}).DESC||""),
+      alamat:m.ALAMAT||"", frac:m.FRAC||"",
+      lpp:sum(lr.map(x=>x.QTY_LPP)),
+      display:sum(drStock.map(x=>x.QTY)),
+      storage:storageQty,
+      minDisplay:minDate(drStock.map(x=>x.TGL_EXP)),
+      minStorage:minDate(srStock.map(x=>x.TGL_EXP)),
+      rakDisplay:Math.max(4,rakDisplay||0),
+      rakStorage:Math.max(4,rakStorage||0)
+    });
+  }
+
+  // Only keep items that actually have qty somewhere (LPP, Display or Storage).
+  let filteredSummary=summary.filter(r=>r.lpp>0||r.display>0||r.storage>0);
+  filteredSummary.forEach((r,i)=>r.no=i+1);
+  const summaryFinal=filteredSummary;
+
+  // Reproduce the useful visible result of REKAP's second table:
+  // one leading row per item plus subsequent storage expiry rows.
+  // rowCount on the first row of an item tells the renderer how many
+  // sub-rows to merge the shared columns (NO..LPP, PUTPICK, SELISIH) across.
+  const detail=[];
+  summaryFinal.forEach((s,i)=>{
+    const dr=(dm.get(s.prdcd)||[]).filter(x=>num(x.QTY)>0);
+    const srRaw=(sm.get(s.prdcd)||[]).filter(x=>num(x.QTY_IN_STORAGE)>0);
+    const sr=groupByExpiry(srRaw,"QTY_IN_STORAGE"); // multiple racks, same expiry date -> summed into one row
+    const lr=lm.get(s.prdcd)||[];
+    const putpick=lr.length?sum(lr.map(x=>x.PUTPICK)):0;
+    const displayFirst=dr.length?num(dr[0].QTY):0;
+    const rowCount=Math.max(dr.length,sr.length,1);
+    const first={no:i+1,prdcd:s.prdcd,desc2:shortDesc(s.desc2),frac:s.frac,lpp:s.lpp,
+      display:displayFirst+putpick,displayExp:dr.length?dateText(dr[0].TGL_EXP):"",
+      storage:sr.length?sr[0].qty*num(s.frac||1):0,
+      storageExp:sr.length?dateText(sr[0].TGL_EXP):"",putpick:putpick,
+      selisih:(displayFirst+putpick)+(sr.length?sr[0].qty*num(s.frac||1):0)-s.lpp,
+      rowCount};
+    detail.push(first);
+    for(let j=1;j<rowCount;j++){
+      const sd=sr[j], dd=dr[j];
+      detail.push({no:"",prdcd:"",desc2:"",frac:"",lpp:"",
+        display:"",displayExp:"",
+        storage:sd?(sd.qty*num(s.frac||1)):"",
+        storageExp:sd?dateText(sd.TGL_EXP):"",putpick:"",selisih:"",
+        continuation:true});
+    }
+  });
+  return {summary:summaryFinal,detail};
+}
+function shortDesc(s){return String(s||"").trim()}
+
+let lastSummaryAOA=null, lastDetailAOA=null, lastDetailMerges=null;
+
+function render(res){
+  const sh=[["NO","PRDCD","DESC2","ALAMAT","FRAC","LPP","DISPLAY","STORAGE","Min Exp Display","Min Exp Storage","Rak Display","Rak Storage"]];
+  res.summary.forEach(r=>sh.push([r.no,r.prdcd,r.desc2,r.alamat,r.frac,r.lpp,r.display,r.storage,dateText(r.minDisplay),dateText(r.minStorage),r.rakDisplay,r.rakStorage]));
+  // Equal-width columns from FRAC (index 4) to the end; NO/PRDCD/DESC2/ALAMAT sized to their content.
+  renderTable($("summaryTable"),sh,{equalFrom:4,firstWidths:[5,9,24,10]});
+  $("summaryCount").textContent=res.summary.length+" item";
+  lastSummaryAOA=sh;
+
+  const dh=[["NO","PRDCD","DESC2","FRAC","LPP","Display Qty","Exp Date","Storage Qty","Exp Date","Put Pick","Selisih"]];
+  const merges=[]; // {r0,r1,c} row range (1-based, inclusive, header offset already applied) to merge in the exported xlsx
+  const MERGE_COLS=[0,1,2,3,4,9,10]; // NO..LPP, Put Pick, Selisih
+  let excelRow=1; // row 0 is the header
+  res.detail.forEach(r=>{
+    dh.push([r.no,r.prdcd,r.desc2,r.frac,r.lpp,r.display,r.displayExp,r.storage,r.storageExp,r.putpick,r.selisih]);
+    if(r.rowCount>1) MERGE_COLS.forEach(c=>merges.push({s:{r:excelRow,c},e:{r:excelRow+r.rowCount-1,c}}));
+    excelRow++;
+  });
+  // Equal-width columns from FRAC (index 3) to the end; NO/PRDCD/DESC2 sized to their content.
+  renderDetailTable($("detailTable"),dh,res.detail,{equalFrom:3,firstWidths:[5,10,26]});
+  $("detailCount").textContent=res.detail.length+" baris";
+  lastDetailAOA=dh; lastDetailMerges=merges;
+}
+// Builds a <colgroup> so columns from `equalFrom` onward share the remaining
+// width equally, while the leading columns keep the percentages in firstWidths.
+function colgroup(totalCols,equalFrom,firstWidths){
+  const used=firstWidths.reduce((a,b)=>a+b,0);
+  const remainCols=totalCols-equalFrom;
+  const eachPct=remainCols>0?((100-used)/remainCols):0;
+  let html="<colgroup>";
+  for(let i=0;i<totalCols;i++){
+    const w=i<equalFrom?firstWidths[i]:eachPct;
+    html+="<col style='width:"+w.toFixed(2)+"%'>";
+  }
+  return html+"</colgroup>";
+}
+function renderTable(el,data,opts){
+  const DESC2_COL=2; // every table has DESC2 as its 3rd column
+  let html=colgroup(data[0].length,opts.equalFrom,opts.firstWidths);
+  html+="<thead><tr>"+data[0].map(x=>"<th>"+esc(x)+"</th>").join("")+"</tr></thead><tbody>";
+  for(let i=1;i<data.length;i++){
+    html+="<tr>"+data[i].map((x,j)=>"<td class='"+(j===DESC2_COL?"":"center")+(j===10&&typeof x==="number"&&x<0?" bad":"")+"'>"+esc(fmt(x))+"</td>").join("")+"</tr>";
+  }
+  html+="</tbody>";el.innerHTML=html;
+}
+// Detail table: rows belonging to the same item share NO/PRDCD/DESC2/FRAC/LPP/
+// Put Pick/Selisih via rowspan, so only the Display/Storage qty+exp columns
+// repeat per sub-row.
+const DETAIL_MERGE_COLS=new Set([0,1,2,3,4,9,10]);
+const DETAIL_OWN_COLS=[5,6,7,8]; // Display Qty, Exp Date, Storage Qty, Exp Date
+function renderDetailTable(el,data,rows,opts){
+  const DESC2_COL=2;
+  let html=colgroup(data[0].length,opts.equalFrom,opts.firstWidths);
+  html+="<thead><tr>"+data[0].map(x=>"<th>"+esc(x)+"</th>").join("")+"</tr></thead><tbody>";
+  for(let i=1;i<data.length;i++){
+    const r=rows[i-1];
+    if(r.continuation){
+      // The NO/PRDCD/DESC2/FRAC/LPP/Put Pick/Selisih cells are already spanning
+      // down from the item's first row, so this <tr> supplies only the 4
+      // remaining columns — otherwise the grid desyncs from the header.
+      html+="<tr>"+DETAIL_OWN_COLS.map(j=>"<td class='center'>"+esc(fmt(data[i][j]))+"</td>").join("")+"</tr>";
+      continue;
+    }
+    const rowspan=r.rowCount>1?" rowspan='"+r.rowCount+"'":"";
+    html+="<tr>"+data[i].map((x,j)=>{
+      const cls=(j===DESC2_COL?"":"center")+(j===10&&typeof x==="number"&&x<0?" bad":"");
+      const span=DETAIL_MERGE_COLS.has(j)?rowspan:"";
+      return "<td"+span+" class='"+cls+"'>"+esc(fmt(x))+"</td>";
+    }).join("")+"</tr>";
+  }
+  html+="</tbody>";el.innerHTML=html;
+}
+function fmt(v){if(v===null||v===undefined||v==="")return "";if(typeof v==="number"){if(v===0)return "";return v.toLocaleString("id-ID",{maximumFractionDigits:2})}return String(v)}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+
+function exportAOA(aoa,filename,merges){
+  if(!aoa||aoa.length<2){$("status").textContent="Belum ada data untuk diexport.";return}
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  if(merges&&merges.length) ws["!merges"]=merges.map(m=>({s:m.s,e:m.e}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Sheet1");
+  XLSX.writeFile(wb,filename);
+}
+$("exportSummaryBtn").onclick=()=>exportAOA(lastSummaryAOA,"Rekap_Item.xlsx");
+$("exportDetailBtn").onclick=()=>exportAOA(lastDetailAOA,"Detail_Display_Storage.xlsx",lastDetailMerges);
+
+$("processBtn").onclick=async()=>{
+  if(!selectedFiles.length){$("status").textContent="Pilih bahan terlebih dahulu.";return}
+  $("processBtn").disabled=true;
+  try{
+    $("status").textContent="Membaca bahan...";
+    const src={};
+    for(const f of selectedFiles){
+      $("status").textContent+="\n• "+f.name;
+      const rows=await readFile(f); const type=classify(f.name,rows);
+      if(type) src[type]=rows;
+    }
+    const missing=["master","lpp","display","storage","plu"].filter(x=>!src[x]);
+    if(missing.length) throw new Error("Bahan belum lengkap. Tidak terdeteksi: "+missing.join(", "));
+    $("status").textContent+="\nMenghitung 2 tabel...";
+    const res=buildResult(src); render(res);
+    $("status").textContent+="\nSelesai.";
+  }catch(e){console.error(e);$("status").textContent="Gagal: "+e.message}
+  finally{$("processBtn").disabled=false}
+};
+</script>
+<script>
+if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));
+</script>
+</body></html>

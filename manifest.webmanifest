@@ -1,0 +1,14 @@
+{
+  "name":"Check Raws - Kopi",
+  "short_name":"Check Raws",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#f4e7d5",
+  "theme_color":"#6b4226",
+  "description":"PWA untuk membuat dua tabel REKAP dari bahan LPP, Display, Storage, Master Stock dan PLU.",
+  "icons":[
+    {"src":"assets/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"assets/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+    {"src":"assets/icon-maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
+  ]
+}
