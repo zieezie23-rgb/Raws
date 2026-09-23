@@ -1,6 +1,6 @@
 {
-  "name":"Check Raws - Kopi",
-  "short_name":"Check Raws",
+  "name":"Check Raw Material",
+  "short_name":"Check Raw Material",
   "start_url":"./",
   "display":"standalone",
   "background_color":"#f4e7d5",

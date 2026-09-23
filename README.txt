@@ -1,4 +1,4 @@
-CHECK RAWS PWA
+CHECK RAW MATERIAL PWA
 ================
 Cara pakai:
 1. Jalankan melalui web server/hosting HTTPS (misalnya GitHub Pages) agar PWA dan Service Worker aktif.
@@ -8,7 +8,7 @@ Cara pakai:
    - ListingPlanogram...csv yang memiliki kolom QTY = DISPLAY
    - ListingPlanogram...csv yang memiliki kolom QTY_IN_STORAGE = STORAGE
    - PLU.csv
-3. Klik Proses Rekap.
+3. Klik Proses.
 4. Tabel 1 dan Tabel 2 dibuat otomatis.
 
 Catatan:

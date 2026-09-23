@@ -1,4 +1,4 @@
-const CACHE="check-raws-v2";
+const CACHE="check-raw-material-v6";
 const CORE=["./","./index.html","./manifest.webmanifest","./assets/icon.png","./assets/icon-192.png","./assets/icon-512.png","./assets/icon-maskable-512.png","./assets/icon-32.png"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));

@@ -4,17 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#6b4226">
-<meta name="description" content="Check Raws - Rekap otomatis dari bahan LPP, Display, Storage, Master Stock dan PLU">
+<meta name="description" content="Check Raw Material - Rekap otomatis dari bahan LPP, Display, Storage, Master Stock dan PLU">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<title>☕ Check Raws PWA</title>
+<title>☕ Check Raw Material</title>
 <style>
 :root{--brown:#6b4226;--brown2:#4a2c17;--cream:#f4e7d5;--bg:#faf3e9;--line:#e0c9a8;--text:#3b2417;--muted:#8a7261;--green:#3f7d43;--red:#c1502e;--accent:#c98a3d}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
 header{background:linear-gradient(135deg,var(--brown2),var(--brown));color:#fff;padding:16px 22px;position:sticky;top:0;z-index:5;box-shadow:0 2px 10px #0003;display:flex;align-items:center;gap:14px}
-header img.mascot{width:52px;height:52px;object-fit:contain;border-radius:50%;background:var(--cream);box-shadow:0 2px 6px #0003;flex-shrink:0}
+header img.mascot{width:54px;height:54px;object-fit:contain;flex-shrink:0}
 header h1{margin:0;font-size:21px;letter-spacing:.3px}header p{margin:4px 0 0;font-size:12px;opacity:.92}
 main{max-width:1500px;margin:auto;padding:18px}
 .card{background:#fffdf9;border:1px solid var(--line);border-radius:16px;box-shadow:0 4px 18px #6b422615;padding:16px;margin-bottom:16px}
@@ -37,22 +37,28 @@ td.num{text-align:right}td.center{text-align:center}
 td.date{text-align:center}
 .empty{text-align:center;color:var(--muted);padding:35px}
 .bad{color:var(--red);font-weight:700}.good{color:var(--green);font-weight:700}
+.tabs{align-items:center}.tabs button{height:38px;padding:0 16px;font-size:13px;line-height:1;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center}.tabs .export{margin-left:auto}
+html{height:100%}body{min-height:100%;display:flex;flex-direction:column}main{flex:1 0 auto;width:100%;margin:0 auto}
+footer{flex-shrink:0;width:100%;max-width:1500px;margin:0 auto;padding:0 18px 18px;color:var(--muted);font-size:12px}
+.guide{background:#fffdf9;border:1px solid var(--line);border-radius:16px;padding:12px 16px;margin-bottom:10px}.guide ol{margin:0;padding-left:20px;line-height:1.6}.guide ul{margin:2px 0;padding-left:18px}.guide .note{font-style:italic}
+.credit{text-align:center;font-size:11px;border-top:1px solid var(--line);padding-top:10px}
+.credit button{background:none;color:var(--brown);padding:0;border-radius:0;font-size:11px;font-weight:700;text-decoration:underline;cursor:pointer;transition:none}.credit button:hover:not(:disabled){background:none;color:var(--brown2);transform:none}
 .hidden{display:none}
 .small{font-size:11px;color:var(--muted)}
 .title-actions{display:flex;align-items:center;gap:10px}
 .btn-small{padding:6px 13px;font-size:11px;border-radius:14px}
-@media(max-width:700px){main{padding:10px}.card{padding:10px}header{padding:12px 14px}header img.mascot{width:42px;height:42px}.upload{display:block}.upload>*{margin-bottom:7px}.btn-row{justify-content:flex-start!important}}
+@media(max-width:700px){main{padding:10px}.card{padding:10px}header{padding:12px 14px}header img.mascot{width:42px;height:42px}.upload{flex-wrap:nowrap;gap:6px}.btn-row{margin-left:auto;gap:6px!important}.upload-btn,.upload button{padding:8px 10px;font-size:12px;white-space:nowrap}.tabs button{padding:0 11px;font-size:12px}.xl{display:none}footer{padding:0 10px 18px}}
 </style>
 </head>
 <body>
-<header><img class="mascot" src="assets/icon.png" alt="Maskot kopi Check Raws"><div><h1>☕ CHECK RAWS</h1></div></header>
+<header><img class="mascot" src="assets/icon.png" alt="Maskot kopi Check Raw Material"><div><h1>CHECK RAW MATERIAL</h1></div></header>
 <main>
 <section class="card">
   <div class="upload">
     <input id="files" class="file-input-hidden" type="file" multiple accept=".csv,.xlsx,.xls">
     <label for="files" class="upload-btn">🫘 Pilih Bahan</label>
     <div class="btn-row" style="display:flex;gap:10px;margin-left:auto">
-      <button id="processBtn">☕ Proses Rekap</button>
+      <button id="processBtn">Proses</button>
       <button id="resetBtn" class="secondary">🧹 Reset</button>
     </div>
   </div>
@@ -62,19 +68,40 @@ td.date{text-align:center}
 
 <section class="card">
   <div class="tabs">
-    <button class="tab active" data-tab="summary">Tabel 1 — Rekap</button>
-    <button class="tab" data-tab="detail">Tabel 2 — Detail</button>
+    <button class="tab active" data-tab="summary">Tabel 1<span class="xl"> — Rekap</span></button>
+    <button class="tab" data-tab="detail">Tabel 2<span class="xl"> — Detail</span></button>
+    <button id="exportBtn" class="secondary export">🧾 Export<span class="xl"> ke Excel</span></button>
   </div>
   <div id="summary" class="panel">
-    <div class="section-title"><h2>REKAP ITEM</h2><div class="title-actions"><span id="summaryCount" class="small"></span><button id="exportSummaryBtn" class="secondary btn-small">🧾 Export ke Excel</button></div></div>
+    <div class="section-title"><h2>REKAP ITEM</h2><div class="title-actions"><span id="summaryCount" class="small"></span></div></div>
     <div class="table-wrap"><table id="summaryTable"></table></div>
   </div>
   <div id="detail" class="panel hidden">
-    <div class="section-title"><h2>DETAIL DISPLAY / STORAGE / PUT PICK</h2><div class="title-actions"><span id="detailCount" class="small"></span><button id="exportDetailBtn" class="secondary btn-small">🧾 Export ke Excel</button></div></div>
+    <div class="section-title"><h2>DETAIL DISPLAY / STORAGE / PUT PICK</h2><div class="title-actions"><span id="detailCount" class="small"></span></div></div>
     <div class="table-wrap"><table id="detailTable"></table></div>
   </div>
 </section>
 </main>
+<footer>
+  <div id="guidePanel" class="guide hidden">
+    <ol>
+      <li>Klik <b>Pilih Bahan</b>, lalu pilih 5 file sekaligus:
+        <ul>
+          <li>Master Stock (.xlsx),</li>
+          <li>Laporan LPP vs Plano (.csv),</li>
+          <li>Listing Planogram Display (.csv),</li>
+          <li>Listing Planogram Storage (.csv), dan</li>
+          <li>PLU (.csv)</li>
+        </ul>
+        <span class="note">*Nama file boleh berbeda*</span>
+      </li>
+      <li>Klik <b>Proses</b></li>
+      <li>Klik <b>Export</b> untuk menyimpan tabel yang sedang dibuka ke Excel.</li>
+      <li>Klik <b>Reset</b> untuk mengulang dari awal.</li>
+    </ol>
+  </div>
+  <div class="credit"><button id="guideToggle" aria-expanded="false" aria-controls="guidePanel">Panduan</button> • Zie Project • Check Raw Material v 1.0 @2026</div>
+</footer>
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
@@ -378,9 +405,17 @@ function exportAOA(aoa,filename,merges){
   XLSX.utils.book_append_sheet(wb,ws,"Sheet1");
   XLSX.writeFile(wb,filename);
 }
-$("exportSummaryBtn").onclick=()=>exportAOA(lastSummaryAOA,"Rekap_Item.xlsx");
-$("exportDetailBtn").onclick=()=>exportAOA(lastDetailAOA,"Detail_Display_Storage.xlsx",lastDetailMerges);
+$("exportBtn").onclick=()=>{
+  const active=document.querySelector(".tab.active").dataset.tab;
+  if(active==="summary") exportAOA(lastSummaryAOA,"Rekap_Item.xlsx");
+  else exportAOA(lastDetailAOA,"Detail_Display_Storage.xlsx",lastDetailMerges);
+};
 
+$("guideToggle").onclick=()=>{
+  const p=$("guidePanel"); const open=!p.classList.toggle("hidden");
+  $("guideToggle").setAttribute("aria-expanded",open);
+  if(open) p.scrollIntoView({behavior:"smooth",block:"nearest"});
+};
 $("processBtn").onclick=async()=>{
   if(!selectedFiles.length){$("status").textContent="Pilih bahan terlebih dahulu.";return}
   $("processBtn").disabled=true;
